@@ -1,0 +1,7 @@
+app_name: HTML5Test
+app_id: org.stillhq.html5test
+main_url: https://html5test.co
+allowed_urls:
+  - https://html5test.co
+icon_url: ""
+allow_multi_window: false
