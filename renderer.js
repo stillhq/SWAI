@@ -1,0 +1,1 @@
+//window.electron.updateTitle("SWAI Powered Web App (Electron)");

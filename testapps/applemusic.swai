@@ -1,0 +1,20 @@
+app_name: Apple Music
+app_id: com.apple.music
+main_url: https://music.apple.com/
+allowed_urls:
+  - https://music.apple.com/*
+  - https://beta.music.apple.com/*
+icon_url: ""
+categories:
+  - AudioVideo
+  - Audio
+  - Music
+comment: Listen to your favorite songs from Apple Music
+allow_multi_window: false
+ecosystem: apple
+external_login: false
+titlebar_colors:
+  background_light = "#f9f9f9";
+  background_dark = "#252526";
+removed_divs:
+  - navigation__native-cta

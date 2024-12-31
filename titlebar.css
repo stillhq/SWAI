@@ -1,0 +1,134 @@
+:root {
+    --window-border-radius: 12px;
+
+    /* Light theme colors */
+    --headerbar-bg-light: #ffffff;
+    --titlebar-fg-light: #2e3436;
+
+    /* Dark theme colors */
+    --headerbar-bg-dark: #303030;
+    --titlebar-fg-dark: #ffffff;
+
+    /* Current theme colors (default to light) */
+    --headerbar-bg: var(--headerbar-bg-light);
+    --titlebar-fg: var(--titlebar-fg-light);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --headerbar-bg: var(--headerbar-bg-dark);
+        --titlebar-fg: var(--titlebar-fg-dark);
+    }
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: "Inter Variable", sans-serif;
+    background: var(--headerbar-bg);
+    color: var(--titlebar-fg);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#titlebar {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 6px;
+}
+
+.window-title {
+    font-size: 11px;
+    font-weight: bold;
+    position: absolute;
+    text-align: center;
+    margin: 0;
+    left: 50%;
+    transform: translate(-50%, -46%);
+    top: 46%;
+}
+
+.window-controls {
+    display: flex;
+    gap: 2px;
+}
+
+.window-controls.left {
+    margin-right: auto;
+}
+
+.window-controls.right {
+    margin-left: auto;
+}
+
+/* Shoutout to Mie UI, I stole their CSS here*/
+.window-button {
+    width: 10px;
+    height: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    display: inline-flex;
+    border: transparent;
+    border-radius: 500rem;
+    position: relative;
+    transition: background 0.3s ease, padding 0.3s ease, width 0.3s ease;
+    color: var(--titlebar-fg);
+    line-height: 1.286;
+    font-weight: 700;
+    padding: 0.7rem 0.7rem;
+    background-color: var(--headerbar-bg);
+    margin: 3pt;
+}
+@media (prefers-color-scheme: light) {
+    .window-button {
+        background-color: color-mix(in srgb,var(--headerbar-bg),#000000 6.5%);
+    }
+    .window-button:hover {
+        background-color: color-mix(in srgb,var(--headerbar-bg),#000000 11.75%);
+    }
+    .window-button:active {
+        background-color: color-mix(in srgb,var(--headerbar-bg),#000000 24%);
+    }
+}
+@media (prefers-color-scheme: dark) {
+    .window-button {
+        background-color: color-mix(in srgb,var(--headerbar-bg),#ffffff 10%);
+    }
+    .window-button:hover {
+        background-color: color-mix(in srgb,var(--headerbar-bg),#ffffff 15%);
+    }
+    .window-button:active {
+        background-color: color-mix(in srgb,var(--headerbar-bg),#ffffff 30.5%);
+    }
+}
+
+.window-button svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+/*.window-button.close svg {*/
+/*    width: 14px;*/
+/*    height: 14px;*/
+/*}*/
+
+.draggable {
+    -webkit-app-region: drag;
+}
+
+.no-drag {
+    -webkit-app-region: no-drag;
+}
+
+body.maximized #titlebar {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+::-webkit-scrollbar {
+    display: none;
+}
