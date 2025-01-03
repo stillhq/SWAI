@@ -7,7 +7,16 @@ function wildCardMatch(str, pattern) {
     return regex.test(str);
 }
 
-function openUrl(url) {
+function wildCardMatchList(str, patterns) {
+    for (const pattern of patterns) {
+        if (wildCardMatch(str, pattern)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function openUrlInBrowser(url) {
     const command = `xdg-open "${url}"`;
     exec(command, (error) => {
         if (error) {
@@ -132,8 +141,9 @@ function pangoToCss(pangoString) {
 
 module.exports = {
     wildCardMatch,
-    openUrl,
+    openUrlInBrowser,
     getWindowControlLayout,
     getTitleFont,
-    pangoToCss
+    pangoToCss,
+    wildCardMatchList
 };

@@ -1,7 +1,10 @@
 These are all test .swai files for certain situations
 
 ## Apple Music
-This is currently the only test that is a full web app. This app is a full web app that requires DRM, light/dark switching, and a few other features. This is a good test for the full capabilities of SWAI.
+This app is a full web app that requires DRM, light/dark switching, and a few other features. This is a good test for the full capabilities of SWAI.
+
+## Microsoft Word
+Used to test external login (testing with my university's login), and multi-window support. This is a good test for the full capabilities of SWAI.
 
 ## Custom Right Click
 This was used to make sure the context menu didn't interfere with websites that implement their own context menus. This is a good test for the context menu.

@@ -3,21 +3,21 @@
 
     /* Light theme colors */
     --headerbar-bg-light: #ffffff;
-    --titlebar-fg-light: #2e3436;
+    --headerbar-fg-light: #2e3436;
 
     /* Dark theme colors */
     --headerbar-bg-dark: #303030;
-    --titlebar-fg-dark: #ffffff;
+    --headerbar-fg-dark: #ffffff;
 
     /* Current theme colors (default to light) */
     --headerbar-bg: var(--headerbar-bg-light);
-    --titlebar-fg: var(--titlebar-fg-light);
+    --headerbar-fg: var(--headerbar-fg-light);
 }
 
 @media (prefers-color-scheme: dark) {
     :root {
         --headerbar-bg: var(--headerbar-bg-dark);
-        --titlebar-fg: var(--titlebar-fg-dark);
+        --headerbar-fg: var(--headerbar-fg-dark);
     }
 }
 
@@ -26,7 +26,7 @@ body {
     padding: 0;
     font-family: "Inter Variable", sans-serif;
     background: var(--headerbar-bg);
-    color: var(--titlebar-fg);
+    color: var(--headerbar-fg);
     user-select: none;
     -webkit-user-select: none;
 }
@@ -53,12 +53,12 @@ body {
 .window-controls {
     display: flex;
     gap: 2px;
+    align-items: center;
+    justify-content: center;
 }
-
 .window-controls.left {
     margin-right: auto;
 }
-
 .window-controls.right {
     margin-left: auto;
 }
@@ -75,8 +75,7 @@ body {
     border-radius: 500rem;
     position: relative;
     transition: background 0.3s ease, padding 0.3s ease, width 0.3s ease;
-    color: var(--titlebar-fg);
-    line-height: 1.286;
+    color: var(--headerbar-fg);
     font-weight: 700;
     padding: 0.7rem 0.7rem;
     background-color: var(--headerbar-bg);
@@ -103,8 +102,26 @@ body {
     .window-button:active {
         background-color: color-mix(in srgb,var(--headerbar-bg),#ffffff 30.5%);
     }
+    /* Changes the SVG to white */
+    .window-button img {
+        filter: invert(100%);
+    }
 }
-
+.window-button.flat {
+    padding: 0.9rem 0.9rem;
+    background-color: transparent;
+}
+.window-button.flat:disabled {
+    opacity: 0.25;
+}
+.window-button.flat:hover {
+    padding: 0.9rem 0.9rem;
+    background-color: color-mix(in srgb,var(--headerbar-bg),#000000 6.5%);
+}
+.window-button.flat:active {
+    padding: 0.9rem 0.9rem;
+    background-color: color-mix(in srgb,var(--headerbar-bg),#000000 24%);
+}
 .window-button svg {
     width: 16px;
     height: 16px;
@@ -122,11 +139,6 @@ body {
 
 .no-drag {
     -webkit-app-region: no-drag;
-}
-
-body.maximized #titlebar {
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
 }
 
 ::-webkit-scrollbar {

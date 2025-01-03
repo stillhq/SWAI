@@ -12,7 +12,6 @@ categories:
 comment: Listen to your favorite songs from Apple Music
 allow_multi_window: false
 ecosystem: apple
-external_login: false
 titlebar_colors:
   background_light = "#f9f9f9";
   background_dark = "#252526";

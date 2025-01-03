@@ -14,7 +14,7 @@ class WebApp {
     allow_multi_window = false;
     ecosystem = null;
     extensions = [];
-    external_login = false;
+    login_urls = [];
 
     static from_yaml_file(path) {  // Opens YAML file see applemusic.swai for reference
         let webapp = new WebApp();
@@ -33,8 +33,26 @@ class WebApp {
         webapp.allow_multi_window = data.allow_multi_window || webapp.allow_multi_window;
         webapp.ecosystem = data.ecosystem || webapp.ecosystem;
         webapp.extensions = data.extensions || webapp.extensions;
-        webapp.external_login = data.external_login || webapp.external_login;
+        webapp.login_urls = data.login_urls || webapp.login_urls;
 
+        return webapp;
+    }
+
+    clone() {
+        let webapp = new WebApp();
+        webapp.app_id = this.app_id;
+        webapp.app_name = this.app_name;
+        webapp.main_url = this.main_url;
+        webapp.allowed_urls = this.allowed_urls;
+        webapp.icon_path = this.icon_path;
+        webapp.categories = this.categories;
+        webapp.keywords = this.keywords;
+        webapp.comment = this.comment;
+        webapp.mimetypes = this.mimetypes;
+        webapp.allow_multi_window = this.allow_multi_window;
+        webapp.ecosystem = this.ecosystem;
+        webapp.extensions = this.extensions;
+        webapp.login_urls = this.login_urls;
         return webapp;
     }
 
@@ -52,7 +70,7 @@ class WebApp {
             allow_multi_window: this.allow_multi_window,
             ecosystem: this.ecosystem,
             extensions: this.extensions,
-            external_login: this.external_login
+            login_urls: this.login_urls
         };
 
         let yaml_data = yaml.safeDump(data);
