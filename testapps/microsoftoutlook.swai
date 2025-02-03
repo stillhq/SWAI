@@ -1,0 +1,19 @@
+app_name: Microsoft Outlook
+app_id: com.microsoft.outlook
+main_url: https://m365.cloud.microsoft/launch/PowerPoint/
+allowed_urls:
+  - "https://outlook.office.com*"
+in_page_navigation_redirect: true
+icon_url: ""
+categories:
+  - Office
+  - Presentation
+comment: Edit Presentation with Microsoft PowerPoint
+allow_multi_window: true
+ecosystem: msoffice
+login_urls:
+  - https://login.microsoftonline.com/*
+  - https://m365.cloud.microsoft/launch/PowerPoint/
+titlebar_colors:
+  background_light = "#f9f9f9";
+  background_dark = "#252526";

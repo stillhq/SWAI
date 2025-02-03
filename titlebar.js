@@ -1,5 +1,9 @@
-const { getWindowControlLayout, getTitleFont, pangoToCss } = require("./swai_utils.js");
+const { parse_arg, getWindowControlLayout, getTitleFont, pangoToCss } = require("./swai_utils.js");
 const {ipcRenderer} = require('electron');
+
+document.querySelector(".window-title").textContent = parse_arg("--webappName") ?? "SWAI Web App";
+console.log(parse_arg("--windowId"))
+let windowId = parseInt(parse_arg("--windowId")) ?? 0;
 
 function createButton(type, iconPath) {
     const button = document.createElement("button");
@@ -15,7 +19,7 @@ function createButton(type, iconPath) {
 
     button.appendChild(img);
     button.onclick = () => {
-        ipcRenderer.send(type);
+        ipcRenderer.send(`${type}-${windowId}`);
     };
     return button;
 }
@@ -65,7 +69,6 @@ async function setupWindowControls() {
         rightControls = "minimize,maximize,close".split(",");
     }
     let { fontFamily, fontWeight, fontStyle, fontSize } = pangoToCss(fontName);
-    console.log(fontName, pangoToCss(fontName));
     document.querySelector(".window-title").style.fontFamily = fontFamily;
     document.querySelector(".window-title").style.fontWeight = "Bold";
     document.querySelector(".window-title").style.fontStyle = fontStyle;
@@ -77,6 +80,7 @@ async function setupWindowControls() {
     let back_button = createButton("back", "./icons/go-previous-symbolic.svg");
     back_button.classList.add("flat");
     back_button.disabled = true;
+
     let forward_button = createButton("forward", "./icons/go-next-symbolic.svg");
     forward_button.classList.add("flat");
     forward_button.disabled = true;
@@ -90,6 +94,7 @@ async function setupWindowControls() {
     }
 
 }
+
 setupWindowControls();
 
 function set_color_titlebar(light_color, dark_color) {
@@ -98,13 +103,13 @@ function set_color_titlebar(light_color, dark_color) {
 }
 
 // Handle window title updates
-ipcRenderer.on("url_changed", (event, title, can_back, can_forward) => {
+ipcRenderer.on(`url-changed-${windowId}`, (event, title, can_back, can_forward) => {
     document.querySelector(".window-title").textContent = title;
     document.querySelector(".window-button.back").disabled = !can_back;
     document.querySelector(".window-button.forward").disabled = !can_forward;
 });
 
-ipcRenderer.on("window-state-change", (event, isMaximized) => {
+ipcRenderer.on(`window-state-change-${windowId}`, (event, isMaximized) => {
 // Handle window state changes for maximize/restore button
     const maximizeButtons = document.querySelectorAll(".window-button.maximize");
     maximizeButtons.forEach(button => {

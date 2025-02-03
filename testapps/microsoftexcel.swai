@@ -1,0 +1,24 @@
+app_name: Microsoft Excel
+app_id: com.microsoft.office.excel
+main_url: https://m365.cloud.microsoft/launch/Excel/
+allowed_urls:
+  - "https://www.microsoft365.com/launch/Excel*"
+  - "https://www.office.com/launch/Excel*"
+  - "https://m365.cloud.microsoft/launch/Excel*"
+  - "https://login.microsoftonline.com/*"
+  - "https://m365.cloud.microsoft/landingv2"
+  - "*.sharepoint.com/:x:*"
+in_page_navigation_redirect: true
+icon_url: ""
+categories:
+  - Office
+  - Spreadsheet
+comment: Edit Spreadsheet with Microsoft Excel
+allow_multi_window: true
+ecosystem: msoffice
+login_urls:
+  - https://login.microsoftonline.com/*
+  - https://m365.cloud.microsoft/launch/Excel/
+titlebar_colors:
+  background_light = "#f9f9f9";
+  background_dark = "#252526";

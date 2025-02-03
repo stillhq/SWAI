@@ -1,40 +1,71 @@
-const { app, BrowserWindow, WebContentsView, BaseWindow, session, ipcMain, protocol, net } = require('electron');
+const { app, BrowserWindow, WebContentsView, BaseWindow, session, ipcMain, nativeImage } = require('electron');
 const WebApp = require('./WebApp');
-const { wildCardMatch, openUrlInBrowser, wildCardMatchList } = require('./swai_utils');
+const { parse_arg, openUrlInBrowser, wildCardMatchList } = require('./swai_utils');
 const path = require('path');
 const fs = require('fs');
+const Ecosystem = require('./Ecosystem');
+const { exec } = require('child_process');
+const spawn = require('child_process').spawn;
 
-let mainWindow = null;
-let mainWebContents = null;
+let windowId = 0;
+
+// Check for the debug mode argument
+let debug_mode = parse_arg("--debug_mode") != null && parse_arg("--debug_mode") === "true";
+let id_to_webapp = {};
+
+function openOtherSWAIApp(webapp) {
+    // We are using a launcher script in here in order to bypass the fact that
+    // there's a weird error when trying to run a new SWAI instance from SWAI itself
+    spawn(
+        "/bin/python3",
+        [
+            path.join(__dirname, "./launcher.py"),
+            path.join(__dirname, "./index.js"),
+            webapp.swai_file_path,
+            `--custom_main_url=${webapp.main_url}`
+        ],
+        {  detached: true  } // Makes the child process independent from the parent
+    );
+}
 
 function createWindow(webapp) {
-    let external_signing_in = false;
-    let webAppSession = null;
+    windowId += 1;
+    let boundsTimeout = null;
+    let webapp_ecosystem = null;
+
+    let webAppSession = session.fromPartition(`${webapp.app_id}-${Date.now()}`);
+    // console.log(`Using session: persist:${webapp.app_id}`);
+    //
+    // // Two webapps cannot use the same session at once due to the IndexedDB lock
+    // // so we are going to change this to make a new session everytime but with synced storage.
+    // storage_path = path.join(app.getPath("userData"), "storage", webapp.app_id);
+
+    // let webAppSession = null;
     if (webapp.ecosystem != null) {
-        webAppSession = session.fromPartition(`persist:${webapp.ecosystem}`);
+        // random_id = Math.floor(Math.random() * 1000000);
+        // webAppSession = session.fromPartition(`persist:${webapp.ecosystem}`);
+        webapp_ecosystem = Ecosystem.new_from_webapp(webapp);
+        webapp_ecosystem.map_urls();
         console.log(`Using session: persist:${webapp.ecosystem}`);
     } else {
-        webAppSession = session.fromPartition(`persist:${webapp.app_id}`);
-        console.log(`Using session: persist:${webapp.app_id}`);
     }
 
-    mainWindow = new BaseWindow({
+    let thisWindow = new BaseWindow({
         width: 1200, height: 900,
-        title: "SWAI Powered Web App",
+        title: webapp.app_name,
         frame: false
     });
 
-    let json_webapp = JSON.stringify(webapp);
     let titlebar = new WebContentsView (
         {
-            // preload: path.join(__dirname, 'titlebar-preload.js'),
             webPreferences: {
                 contextIsolation: false,
                 nodeIntegration: true,
+                additionalArguments: [
+                    `--windowId=${windowId}`,
+                    `--webappName=${webapp.app_name}`
+                ],
             },
-            additionalArguments: [
-                `webapp=${json_webapp}`
-            ],
         }
     )
 
@@ -42,32 +73,52 @@ function createWindow(webapp) {
         {
             nodeIntegration: false,
             contextIsolation: false,
-            webPreferences: {
-                session: webAppSession
-            }
+            // webPreferences: {
+            //     session: webAppSession
+            // }
         },
     );
     titlebar.webContents.loadURL(`file://${path.join(__dirname, 'titlebar.html')}`);
-    mainWindow.removeMenu();
-    mainWindow.contentView.addChildView(titlebar);
-    mainWindow.contentView.addChildView(mainWebContents);
+    thisWindow.removeMenu();
+    thisWindow.contentView.addChildView(titlebar);
+    thisWindow.contentView.addChildView(mainWebContents);
+
+    let custom_main_url = parse_arg("--custom_main_url");
+    if (custom_main_url) {
+        webapp.main_url = custom_main_url;
+        if (!(wildCardMatchList(custom_main_url, webapp.allowed_urls))) {
+            webapp.allowed_urls.push(custom_main_url);
+        };
+    }
+
     mainWebContents.webContents.loadURL(webapp.main_url);
 
+    if (debug_mode) {
+        titlebar.webContents.openDevTools();
+        mainWebContents.webContents.openDevTools();
+    }
+
     function updateBounds() {
-        const { width, height } = mainWindow.getBounds();
-        // Set to 300 to see dev tools. Change 300 to 36 for regular
-        titlebar.setBounds({ x: 0, y: 0, width, height: 36 });
-        mainWebContents.setBounds({ x: 0, y: 36, width, height: height - 36 });
+        const { width, height } = thisWindow.getBounds();
+        let titlebarHeight = debug_mode ? 300 : 36;  // Makes the titlebar bigger in debug mode so you can actually see the dev tools
+        titlebar.setBounds({ x: 0, y: 0, width, height: titlebarHeight });
+        mainWebContents.setBounds({ x: 0, y: titlebarHeight, width, height: height - titlebarHeight });
     }
     updateBounds();
 
-    mainWindow.on('resize', updateBounds);
+    thisWindow.on('resize', () => {
+        updateBounds();
+        if (boundsTimeout) {
+            clearTimeout(boundsTimeout);
+        }
+        boundsTimeout = setTimeout(updateBounds, 1000); // Rerun updateBounds after 1sec to fix side white line
+    });
 
     mainWebContents.webContents.on("dom-ready", () => {
         console.log("dom ready");
 
         // Renderer injection
-        if (mainWindow) {
+        if (thisWindow) {
             const rendererCode = fs.readFileSync(
                 path.join(__dirname, 'renderer.js'),
                 'utf8'
@@ -82,7 +133,7 @@ function createWindow(webapp) {
                 console.error('Failed to read CSS file:', err);
                 return;
             }
-            if (mainWindow) {
+            if (thisWindow) {
                 mainWebContents.webContents.insertCSS(data).catch((error) => {
                     console.error('Failed to inject CSS:', error);
                 });
@@ -96,7 +147,7 @@ function createWindow(webapp) {
                 return { action: "deny" };
             }
             if (!webapp.allow_multi_window) {
-                createTransientWindow(details.url, webAppSession, mainWindow);
+                    createTransientWindow(details.url, webAppSession, thisWindow);
                 return { action: "deny" };
             }
             if (wildCardMatchList(details.url, webapp.allowed_urls)) {
@@ -105,7 +156,7 @@ function createWindow(webapp) {
                 createWindow(new_window_app);
                 return { action: "deny" };
             } else {
-                createTransientWindow(details.url, webAppSession, mainWindow);
+                createTransientWindow(details.url, webAppSession, thisWindow);
                 return { action: "deny" };
             }
             return { action: "allow" };
@@ -118,26 +169,61 @@ function createWindow(webapp) {
             }
         });
 
-        mainWebContents.webContents.on("did-navigate", (event, navigationUrl) => {
-            mainWindow.title = mainWebContents.webContents.getTitle();
-            titlebar.webContents.send(
-                "url-changed", mainWebContents.webContents.getTitle(),
-                mainWebContents.webContents.navigationHistory.canGoBack(),
-                mainWebContents.webContents.navigationHistory.canGoForward()
-            );
-        });
         mainWebContents.webContents.on("did-navigate-in-page", (event, navigationUrl) => {
-            mainWindow.title = mainWebContents.webContents.getTitle();
+            if (webapp.in_page_navigation_redirect) {
+                if (mainWebContents.webContents.navigationHistory.canGoBack()) {
+
+                    let back_index = mainWebContents.webContents.navigationHistory.getActiveIndex();
+                    let back_url = mainWebContents.webContents.navigationHistory.getEntryAtIndex(back_index - 1).url;
+                    console.log(back_url);
+
+                    if (!(back_url == navigationUrl) && !(back_url == "about:blank")) {
+                        if (!get_navigation_allowed(back_url, navigationUrl)) {
+                            event.preventDefault();
+
+                            console.log(get_navigation_allowed(back_url, navigationUrl), navigationUrl);
+                            if ((webapp_ecosystem != null) && !(get_navigation_allowed(back_url, navigationUrl))) {
+                                let open_webapp = webapp_ecosystem.open_url_in_ecosystem(navigationUrl);
+                                if (!(open_webapp)) {
+                                    openUrlInBrowser(navigationUrl);
+                                } else {
+                                    console.log(`Opening ecosystem webapp for ${open_webapp.app_id}`)
+                                    openOtherSWAIApp(open_webapp);
+                                }
+                                mainWebContents.webContents.navigationHistory.goBack();
+                            }
+                        }
+                    }
+                    // if (!get_navigation_allowed(back_url, navigationUrl)) {
+                    //     event.preventDefault();
+                    //     openUrlInBrowser(navigationUrl);
+                    // }
+                }
+            }
+        });
+
+        mainWebContents.webContents.on("did-navigate", (event, navigationUrl) => {
+            thisWindow.title = mainWebContents.webContents.getTitle();
             titlebar.webContents.send(
-                "url_changed", mainWebContents.webContents.getTitle(),
+                `url-changed-${windowId}`, mainWebContents.webContents.getTitle(),
                 mainWebContents.webContents.navigationHistory.canGoBack(),
                 mainWebContents.webContents.navigationHistory.canGoForward()
             );
         });
-        mainWebContents.webContents.on("page-title-updated", (event, title) => {
-            mainWindow.title = mainWebContents.webContents.getTitle();
+
+        mainWebContents.webContents.on("did-navigate-in-page", (event, navigationUrl) => {
+            thisWindow.title = mainWebContents.webContents.getTitle();
             titlebar.webContents.send(
-                "url_changed", mainWebContents.webContents.getTitle(),
+                `url-changed-${windowId}`, mainWebContents.webContents.getTitle(),
+                mainWebContents.webContents.navigationHistory.canGoBack(),
+                mainWebContents.webContents.navigationHistory.canGoForward()
+            );
+        });
+
+        mainWebContents.webContents.on("page-title-updated", (event, title) => {
+            thisWindow.title = mainWebContents.webContents.getTitle();
+            titlebar.webContents.send(
+                `url-changed-${windowId}`, mainWebContents.webContents.getTitle(),
                 mainWebContents.webContents.navigationHistory.canGoBack(),
                 mainWebContents.webContents.navigationHistory.canGoForward()
             );
@@ -164,40 +250,38 @@ function createWindow(webapp) {
                 }
             }
         });
-
-        mainWebContents.on('closed', () => {
-            mainWindow = null;
-        });
     });
 
-    ipcMain.on('back', () => {
-        if (mainWindow) {
+    ipcMain.on(`back-${windowId}`, () => {
+        if (thisWindow) {
             mainWebContents.webContents.navigationHistory.goBack();
         }
     });
 
-    ipcMain.on('forward', () => {
-        if (mainWindow) {
+    ipcMain.on(`forward-${windowId}`, () => {
+        if (thisWindow) {
             mainWebContents.webContents.navigationHistory.goForward();
         }
     });
 
-    ipcMain.on('close', () => {
-        if (mainWindow) {
-            mainWindow.close();
+    ipcMain.on(`close-${windowId}`, () => {
+        if (thisWindow) {
+            thisWindow.close();
         }
     });
-    ipcMain.on('minimize', () => {
-        if (mainWindow) {
-            mainWindow.minimize();
+
+    ipcMain.on(`minimize-${windowId}`, () => {
+        if (thisWindow) {
+            thisWindow.minimize();
         }
     });
-    ipcMain.on('maximize', () => {
-        if (mainWindow) {
-            if (mainWindow.isMaximized()) {
-                mainWindow.unmaximize();
+
+    ipcMain.on(`maximize-${windowId}`, () => {
+        if (thisWindow) {
+            if (thisWindow.isMaximized()) {
+                thisWindow.unmaximize();
             } else {
-                mainWindow.maximize();
+                thisWindow.maximize();
             }
         }
     });
@@ -211,6 +295,11 @@ function createWindow(webapp) {
     })();
 
     function get_navigation_allowed(currentUrl, navigationUrl) {
+        // Check if url is disallowed
+        if (wildCardMatchList(navigationUrl, webapp.not_allowed_urls)) {
+            console.log("Opening browser window");
+            return false;
+        }
         // Allows login urls to open external links
         if (wildCardMatchList(currentUrl, webapp.login_urls)) {
             console.log("Bypassed Browser Window1");
@@ -227,6 +316,8 @@ function createWindow(webapp) {
         }
         return false;
     }
+
+    return thisWindow;
 }
 
 function createTransientWindow(url, session, parent) {
@@ -243,9 +334,9 @@ function createTransientWindow(url, session, parent) {
     transientWindow.once('ready-to-show', () => {
         transientWindow.show();
     });
-    transientWindow.on('closed', () => {
-        transientWindow = null;
-    });
+    // transientWindow.on('closed', () => {
+    //     transientWindow = null;
+    // });
     transientWindow.removeMenu();
 }
 
@@ -268,9 +359,7 @@ app.on('ready', () => {
         app.commandLine.appendSwitch('ozone-platform-hint', "auto");
         app.setAppUserModelId(webapp.app_id);
 
-        if (mainWindow === null) {
-            createWindow(webapp);
-        }
+        createWindow(webapp);
     }
     catch (e) {
         console.error(e);

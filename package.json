@@ -2,9 +2,9 @@
   "name": "swai",
   "version": "1.0.0",
   "description": "Run web apps as if they are desktop apps.",
-  "main": "dist/main.js",
+  "main": "dist/index.js",
   "devDependencies": {
-    "electron": "github:castlabs/electron-releases#v33.0.0+wvcus"
+    "electron": "github:castlabs/electron-releases#v33.3.1+wvcus"
   },
   "private": true,
   "dependencies": {

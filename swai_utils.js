@@ -1,10 +1,36 @@
 const exec = require('child_process').exec;
 
+function parse_arg(arg_key) {
+    let return_value = null;
+    let args = process.argv;
+    args.forEach(arg => {
+        if (arg.startsWith("--")) {
+            let [key, value] = arg.split("=");
+            if (key == arg_key) {
+                return_value = value;
+            }
+        }
+    })
+    return return_value;
+}
+
 function wildCardMatch(str, pattern) {
+    str = str.toLowerCase();
+    pattern = pattern.toLowerCase();
     // Escape special characters in the pattern and replace '*' with '.*'
     const regexPattern = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
     const regex = new RegExp(`^${regexPattern}$`);
-    return regex.test(str);
+    // Make sure the url works with or without a trailing slash
+    if (str.endsWith("/")) {
+        if (regex.test(str.slice(0, -1))) {
+            return str;
+        }
+    } else if (regex.test(str + "/")) {
+        return str;
+    } else if (regex.test(str)) {
+        return str;
+    }
+    return null;
 }
 
 function wildCardMatchList(str, patterns) {
@@ -140,6 +166,7 @@ function pangoToCss(pangoString) {
 }
 
 module.exports = {
+    parse_arg,
     wildCardMatch,
     openUrlInBrowser,
     getWindowControlLayout,

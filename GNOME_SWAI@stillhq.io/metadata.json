@@ -1,0 +1,7 @@
+{
+  "uuid": "GNOME_SWAI@stillhq.io",
+  "name": "SWAI GNOME Integration",
+  "description": "Uses GNOME to seperate web apps in the same ecosystem and make them feel more like native apps",
+  "shell-version": [ "47" ],
+  "url": "https://stillhq.io"
+}

@@ -2,18 +2,21 @@ app_name: Microsoft Word
 app_id: com.microsoft.office.word
 main_url: https://m365.cloud.microsoft/launch/Word/
 allowed_urls:
-  - https://m365.cloud.microsoft/launch/Word*
-  - https://login.microsoftonline.com/*
-  - https://m365.cloud.microsoft/landingv2
-  - "*my.sharepoint.com*"
+  - "https://www.microsoft365.com/launch/Word*"
+  - "https://www.office.com/launch/Word*"
+  - "https://m365.cloud.microsoft/launch/Word*"
+  - "https://login.microsoftonline.com/*"
+  - "https://m365.cloud.microsoft/landingv2"
+  - "*.sharepoint.com/*"
+  - "*.sharepoint.com/:w:*"
+in_page_navigation_redirect: true
 icon_url: ""
 categories:
-  - AudioVideo
-  - Audio
-  - Music
+  - Office
+  - WordProcessor
 comment: Edit Documents with Microsoft Word
 allow_multi_window: true
-ecosystem: msofficeddd
+ecosystem: msoffice
 login_urls:
   - https://login.microsoftonline.com/*
   - https://m365.cloud.microsoft/launch/Word/

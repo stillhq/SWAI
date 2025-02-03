@@ -1,0 +1,17 @@
+app_name: Zoho
+app_id: com.zoho.home
+main_url: https://home.zoho.com/home
+allowed_urls:
+  - "https://home.zoho.com/home*"
+in_page_navigation_redirect: true
+icon_url: ""
+categories:
+  - Office
+comment: Zoho
+allow_multi_window: true
+ecosystem: zoho
+login_urls:
+  - https://accounts.zoho.com/*
+titlebar_colors:
+  background_light = "#f9f9f9";
+  background_dark = "#252526";

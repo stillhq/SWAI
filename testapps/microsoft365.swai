@@ -1,0 +1,22 @@
+app_name: Microsoft 365
+app_id: com.microsoft.office.365
+main_url: https://www.microsoft365.com
+allowed_urls:
+  - "https://www.microsoft365.com*"
+
+  - "https://www.microsoft365.com/launch*"
+  - "https://www.office.com/launch*"
+  - "https://m365.cloud.microsoft/launch*"
+in_page_navigation_redirect: true
+icon_url: ""
+categories:
+  - Office
+comment: Edit Documents with Microsoft Word
+allow_multi_window: true
+ecosystem: msoffice
+login_urls:
+  - https://login.microsoftonline.com/*
+  - https://m365.cloud.microsoft
+titlebar_colors:
+  background_light = "#f9f9f9";
+  background_dark = "#252526";

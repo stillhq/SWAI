@@ -1,0 +1,24 @@
+app_name: Microsoft OneNote
+app_id: com.microsoft.office.onenote
+main_url: https://m365.cloud.microsoft/launch/OneNote/
+allowed_urls:
+  - "https://www.microsoft365.com/launch/OneNote*"
+  - "https://www.office.com/launch/OneNote*"
+  - "https://m365.cloud.microsoft/launch/OneNote*"
+  - "https://login.microsoftonline.com/*"
+  - "https://m365.cloud.microsoft/landingv2"
+  - "*.sharepoint.com/:o:*"
+in_page_navigation_redirect: true
+icon_url: ""
+categories:
+  - Office
+  - WordProcessor
+comment: Note-taking with Microsoft OneNote
+allow_multi_window: true
+ecosystem: msoffice
+login_urls:
+  - https://login.microsoftonline.com/*
+  - https://m365.cloud.microsoft/launch/OneNote/
+titlebar_colors:
+  background_light = "#f9f9f9";
+  background_dark = "#252526";
