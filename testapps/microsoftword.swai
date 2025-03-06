@@ -17,7 +17,6 @@ categories:
 comment: Edit Documents with Microsoft Word
 allow_multi_window: true
 ecosystem: msoffice
-ecosystem_title: Microsoft Office
 login_urls:
   - https://login.microsoftonline.com/*
   - https://m365.cloud.microsoft/launch/Word/
