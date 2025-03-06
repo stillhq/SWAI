@@ -4,12 +4,13 @@
   "description": "Run web apps as if they are desktop apps.",
   "main": "dist/index.js",
   "devDependencies": {
-    "electron": "github:castlabs/electron-releases#v33.3.1+wvcus"
+    "@babel/plugin-proposal-decorators": "^7.25.9",
+    "electron": "github:castlabs/electron-releases#v34.3.0+wvcus"
   },
   "private": true,
   "dependencies": {
-    "bindings": "^1.5.0",
     "css-font-parser": "^2.0.1",
+    "dbus-next": "^0.10.2",
     "electron-context-menu": "^4.0.4",
     "js-yaml": "^4.1.0",
     "node-addon-api": "^8.3.0"

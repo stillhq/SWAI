@@ -5,7 +5,6 @@ const {
     BaseWindow,
     session,
     ipcMain,
-    nativeImage,
 } = require("electron");
 const WebApp = require("./WebApp");
 const {
@@ -17,32 +16,32 @@ const {
 const path = require("path");
 const fs = require("fs");
 const Ecosystem = require("./Ecosystem");
-const { exec } = require("child_process");
-const spawn = require("child_process").spawn;
+const dbus = require("dbus-next");
+const { sessionBus } = dbus;
 
 let windowId = 0;
 
 // Check for the debug mode argument
 let debug_mode =
     parse_arg("--debug_mode") != null && parse_arg("--debug_mode") === "true";
-let id_to_webapp = {};
 const gnome_integration = checkSwaiExtensionRunning();
 
-console.log("GNOME Extension Running: " + gnome_integration);
+const gotTheLock = app.requestSingleInstanceLock()
 
-function openOtherSWAIApp(webapp) {
-    // We are using a launcher script in here in order to bypass the fact that
-    // there's a weird error when trying to run a new SWAI instance from SWAI itself
-    spawn(
-        "/bin/python3",
-        [
-            path.join(__dirname, "./launcher.py"),
-            path.join(__dirname, "./index.js"),
-            webapp.swai_file_path,
-            `--custom_main_url=${webapp.main_url}`,
-        ],
-        { detached: true }, // Makes the child process independent from the parent
-    );
+if (!gotTheLock) {
+    app.quit()
+}
+
+let dbus_proxy = null;
+let dbus_interface = null;
+
+async function initalize_dbus() {
+    let bus = sessionBus();
+    dbus_proxy = await bus.getProxyObject(
+        "io.stillhq.SWAIWindowManager",
+        "/io/stillhq/SWAIWindowManager",
+    )
+    dbus_interface = dbus_proxy.getInterface("io.stillhq.SWAIWindowManager");
 }
 
 function createWindow(webapp) {
@@ -50,7 +49,6 @@ function createWindow(webapp) {
     let boundsTimeout = null;
     let webapp_ecosystem = null;
 
-    let webAppSession = session.fromPartition(`${webapp.app_id}-${Date.now()}`);
     // console.log(`Using session: persist:${webapp.app_id}`);
     //
     // // Two webapps cannot use the same session at once due to the IndexedDB lock
@@ -59,40 +57,73 @@ function createWindow(webapp) {
 
     // let webAppSession = null;
     if (webapp.ecosystem != null) {
-        // random_id = Math.floor(Math.random() * 1000000);
-        // webAppSession = session.fromPartition(`persist:${webapp.ecosystem}`);
+        webAppSession = session.fromPartition(`persist:${webapp.ecosystem}`);
         webapp_ecosystem = Ecosystem.new_from_webapp(webapp);
         webapp_ecosystem.map_urls();
     } else {
+        webAppSession = session.fromPartition(`persist:${webapp.app_id}`);
     }
 
-    let window_data = {
-        app_id: webapp.app_id,
-        window_num: windowId,
-        title: webapp.app_name,
-    };
+    let thisWindow = null;
+    let swai_win_id = `swai.${windowId}.${webapp.app_id}`;
+    let window_registered = false;
+    let title_queue = null;  // Used to queue up a title change if the window is not registered yet
 
-    let thisWindow = new BaseWindow({
+    let window_title = webapp.app_name;
+    if (gnome_integration) {
+        window_title = swai_win_id;
+        title_queue = webapp.app_name;
+    }
+
+    thisWindow = new BaseWindow({
         width: 1200,
         height: 900,
-        title: webapp.app_name,
+        title: window_title,
         frame: false,
     });
 
+    if (gnome_integration) {
+        dbus_interface.RegisterWindow(
+            swai_win_id,
+            webapp.app_name,
+            webapp.app_id,
+            webapp.swai_file_path,
+        ).then().catch(e => console.error(e));
+
+        dbus_interface.on('WindowRegistered', (title, swai_window_id) => {
+            if (swai_window_id === swai_win_id) {
+                window_registered = true;
+                if (title_queue != null) {
+                    thisWindow.set_title(title_queue);
+                    title_queue = null;
+                }
+            }
+        });
+    }
+
+    function set_title(title) {
+        if (gnome_integration) {
+            if (!(window_registered)) {
+                title_queue = title;
+                return;
+            }
+        }
+        thisWindow.title = title;
+    }
+
     let titlebar = new WebContentsView({
-        webPreferences: {
-            contextIsolation: false,
-            nodeIntegration: true,
-            additionalArguments: [
-                `--windowId=${windowId}`,
-                `--webappName=${webapp.app_name}`,
-            ],
-        },
-    });
+    webPreferences: {
+        contextIsolation: false,
+        nodeIntegration: true,
+        additionalArguments: [
+            `--windowId=${windowId}`,
+            `--webappName=${webapp.app_name}`,
+        ],
+    }});
 
     let mainWebContents = new WebContentsView({
         nodeIntegration: false,
-        contextIsolation: false,
+        contextIsolation: true,
         // webPreferences: {
         //     session: webAppSession
         // }
@@ -211,73 +242,48 @@ function createWindow(webapp) {
             },
         );
 
-        mainWebContents.webContents.on(
-            "did-navigate-in-page",
-            (event, navigationUrl) => {
-                if (webapp.in_page_navigation_redirect) {
-                    if (
-                        mainWebContents.webContents.navigationHistory.canGoBack()
-                    ) {
-                        let back_index =
-                            mainWebContents.webContents.navigationHistory.getActiveIndex();
-                        let back_url =
-                            mainWebContents.webContents.navigationHistory.getEntryAtIndex(
-                                back_index - 1,
-                            ).url;
-                        console.log(back_url);
+        mainWebContents.webContents.on("did-navigate-in-page",  (event, navigationUrl) => {
+            if (webapp.in_page_navigation_redirect) {
+                if (mainWebContents.webContents.navigationHistory.canGoBack()) {
+                    let back_index =
+                        mainWebContents.webContents.navigationHistory.getActiveIndex();
+                    let back_url =
+                        mainWebContents.webContents.navigationHistory.getEntryAtIndex(
+                            back_index - 1,
+                        ).url;
+                    console.log(back_url);
 
-                        if (
-                            !(back_url == navigationUrl) &&
-                            !(back_url == "about:blank")
-                        ) {
-                            if (
-                                !get_navigation_allowed(back_url, navigationUrl)
-                            ) {
-                                event.preventDefault();
+                    if (!(back_url == navigationUrl) && !(back_url == "about:blank")) {
+                        if (!get_navigation_allowed(back_url, navigationUrl)) {
+                            event.preventDefault();
 
-                                console.log(
-                                    get_navigation_allowed(
-                                        back_url,
-                                        navigationUrl,
-                                    ),
+                            if (webapp_ecosystem != null && !get_navigation_allowed(
+                                back_url,
+                                navigationUrl,
+                            )) {
+                                let open_webapp = webapp_ecosystem.open_url_in_ecosystem(
                                     navigationUrl,
                                 );
-                                if (
-                                    webapp_ecosystem != null &&
-                                    !get_navigation_allowed(
-                                        back_url,
-                                        navigationUrl,
-                                    )
-                                ) {
-                                    let open_webapp =
-                                        webapp_ecosystem.open_url_in_ecosystem(
-                                            navigationUrl,
-                                        );
-                                    if (!open_webapp) {
-                                        openUrlInBrowser(navigationUrl);
-                                    } else {
-                                        console.log(
-                                            `Opening ecosystem webapp for ${open_webapp.app_id}`,
-                                        );
-                                        openOtherSWAIApp(open_webapp);
-                                    }
-                                    mainWebContents.webContents.navigationHistory.goBack();
+                                if (!open_webapp) {
+                                    openUrlInBrowser(navigationUrl);
+                                } else {
+                                    console.log(
+                                        `Opening ecosystem webapp for ${open_webapp.app_id}`,
+                                    );
+                                    createWindow(open_webapp);
                                 }
+                                mainWebContents.webContents.navigationHistory.goBack();
                             }
                         }
-                        // if (!get_navigation_allowed(back_url, navigationUrl)) {
-                        //     event.preventDefault();
-                        //     openUrlInBrowser(navigationUrl);
-                        // }
                     }
                 }
-            },
-        );
+            }
+        });
 
         mainWebContents.webContents.on(
             "did-navigate",
             (event, navigationUrl) => {
-                thisWindow.title = mainWebContents.webContents.getTitle();
+                set_title(mainWebContents.webContents.getTitle());
                 titlebar.webContents.send(
                     `url-changed-${windowId}`,
                     mainWebContents.webContents.getTitle(),
@@ -290,7 +296,7 @@ function createWindow(webapp) {
         mainWebContents.webContents.on(
             "did-navigate-in-page",
             (event, navigationUrl) => {
-                thisWindow.title = mainWebContents.webContents.getTitle();
+                set_title(mainWebContents.webContents.getTitle());
                 titlebar.webContents.send(
                     `url-changed-${windowId}`,
                     mainWebContents.webContents.getTitle(),
@@ -301,7 +307,7 @@ function createWindow(webapp) {
         );
 
         mainWebContents.webContents.on("page-title-updated", (event, title) => {
-            thisWindow.title = mainWebContents.webContents.getTitle();
+            set_title(mainWebContents.webContents.getTitle());
             titlebar.webContents.send(
                 `url-changed-${windowId}`,
                 mainWebContents.webContents.getTitle(),
@@ -424,9 +430,6 @@ function createTransientWindow(url, session, parent) {
     transientWindow.once("ready-to-show", () => {
         transientWindow.show();
     });
-    // transientWindow.on('closed', () => {
-    //     transientWindow = null;
-    // });
     transientWindow.removeMenu();
 }
 
@@ -448,11 +451,15 @@ app.on("ready", () => {
         const webapp = WebApp.from_yaml_file(filePath);
         app.commandLine.appendSwitch("ozone-platform-hint", "auto");
 
-        app.setName(
-            webapp.ecosystem_title || webapp.ecosystem || webapp.app_name,
-        );
+        app.setName("io.stillhq.swai");
 
-        createWindow(webapp);
+        if (gnome_integration) {
+            initalize_dbus().then(r => {
+                createWindow(webapp)
+            }).catch(e => console.error(e));
+        } else {
+            createWindow(webapp);
+        }
     } catch (e) {
         console.error(e);
         app.quit();
